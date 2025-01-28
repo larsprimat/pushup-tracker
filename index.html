@@ -47,7 +47,7 @@
         }
         .stats {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
             margin-bottom: 16px;
         }
@@ -56,6 +56,10 @@
             padding: 12px;
             border-radius: 8px;
             text-align: center;
+        }
+        .goal-card {
+            background: #e8f5e9;
+            grid-column: span 2;
         }
         .stat-label {
             font-size: 14px;
@@ -66,6 +70,9 @@
             font-weight: bold;
             color: #007AFF;
         }
+        .goal-value {
+            color: #2e7d32;
+        }
         .log {
             max-height: 200px;
             overflow-y: auto;
@@ -75,6 +82,18 @@
             justify-content: space-between;
             padding: 8px 0;
             border-bottom: 1px solid #eee;
+        }
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 4px;
+            height: 8px;
+            margin-top: 8px;
+        }
+        .progress-fill {
+            background: #4caf50;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
         }
     </style>
 </head>
@@ -92,12 +111,18 @@
                     <div class="stat-value" id="todayCount">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Weekly</div>
-                    <div class="stat-value" id="weeklyCount">0</div>
-                </div>
-                <div class="stat-card">
                     <div class="stat-label">Total</div>
                     <div class="stat-value" id="totalCount">0</div>
+                </div>
+                <div class="stat-card goal-card">
+                    <div class="stat-label">2025 Goal Progress</div>
+                    <div class="stat-value goal-value" id="goalProgress">0/10000</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                    </div>
+                    <div class="stat-label" style="margin-top: 8px;">
+                        Daily target: <span id="dailyTarget">0</span> pushups
+                    </div>
                 </div>
             </div>
         </div>
@@ -108,8 +133,24 @@
     </div>
 
     <script>
+        const YEAR_GOAL = 10000;
+        
         // Load data from localStorage
         let logs = JSON.parse(localStorage.getItem('pushupLogs')) || [];
+
+        function getDaysLeftInYear() {
+            const today = new Date();
+            const endOfYear = new Date(2025, 11, 31);
+            const diffTime = Math.abs(endOfYear - today);
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function calculateDailyTarget() {
+            const totalDone = logs.reduce((sum, log) => sum + log.count, 0);
+            const remaining = YEAR_GOAL - totalDone;
+            const daysLeft = getDaysLeftInYear();
+            return Math.ceil(Math.max(0, remaining / daysLeft));
+        }
 
         function logPushups() {
             const count = parseInt(document.getElementById('pushupCount').value);
@@ -128,23 +169,26 @@
 
         function updateDisplay() {
             const today = new Date().toDateString();
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-
+            
             const todayTotal = logs
                 .filter(log => new Date(log.date).toDateString() === today)
                 .reduce((sum, log) => sum + log.count, 0);
 
-            const weeklyTotal = logs
-                .filter(log => new Date(log.date) >= weekAgo)
-                .reduce((sum, log) => sum + log.count, 0);
-
             const allTimeTotal = logs.reduce((sum, log) => sum + log.count, 0);
-
+            
+            // Update basic stats
             document.getElementById('todayCount').textContent = todayTotal;
-            document.getElementById('weeklyCount').textContent = weeklyTotal;
             document.getElementById('totalCount').textContent = allTimeTotal;
+            
+            // Update goal progress
+            const progressPercent = (allTimeTotal / YEAR_GOAL) * 100;
+            document.getElementById('goalProgress').textContent = `${allTimeTotal}/${YEAR_GOAL}`;
+            document.getElementById('progressBar').style.width = `${Math.min(100, progressPercent)}%`;
+            
+            // Update daily target
+            document.getElementById('dailyTarget').textContent = calculateDailyTarget();
 
+            // Update log list
             const logList = document.getElementById('logList');
             logList.innerHTML = logs
                 .slice(0, 10)
