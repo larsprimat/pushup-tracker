@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>Pushup Tracker</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 16px;
+            background: #f0f2f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007AFF;
+        }
+        .log {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .log-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>Pushup Tracker</h2>
+            <div class="input-group">
+                <input type="number" id="pushupCount" placeholder="Number of pushups">
+                <button onclick="logPushups()">Log</button>
+            </div>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Today</div>
+                    <div class="stat-value" id="todayCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Weekly</div>
+                    <div class="stat-value" id="weeklyCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total</div>
+                    <div class="stat-value" id="totalCount">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Recent Logs</h3>
+            <div class="log" id="logList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load data from localStorage
+        let logs = JSON.parse(localStorage.getItem('pushupLogs')) || [];
+
+        function logPushups() {
+            const count = parseInt(document.getElementById('pushupCount').value);
+            if (isNaN(count) || count <= 0) return;
+
+            const log = {
+                date: new Date().toISOString(),
+                count: count
+            };
+
+            logs.unshift(log);
+            localStorage.setItem('pushupLogs', JSON.stringify(logs));
+            updateDisplay();
+            document.getElementById('pushupCount').value = '';
+        }
+
+        function updateDisplay() {
+            const today = new Date().toDateString();
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+
+            const todayTotal = logs
+                .filter(log => new Date(log.date).toDateString() === today)
+                .reduce((sum, log) => sum + log.count, 0);
+
+            const weeklyTotal = logs
+                .filter(log => new Date(log.date) >= weekAgo)
+                .reduce((sum, log) => sum + log.count, 0);
+
+            const allTimeTotal = logs.reduce((sum, log) => sum + log.count, 0);
+
+            document.getElementById('todayCount').textContent = todayTotal;
+            document.getElementById('weeklyCount').textContent = weeklyTotal;
+            document.getElementById('totalCount').textContent = allTimeTotal;
+
+            const logList = document.getElementById('logList');
+            logList.innerHTML = logs
+                .slice(0, 10)
+                .map(log => `
+                    <div class="log-item">
+                        <span>${new Date(log.date).toLocaleDateString()}</span>
+                        <span>${log.count} pushups</span>
+                    </div>
+                `)
+                .join('');
+        }
+
+        // Initial display update
+        updateDisplay();
+    </script>
+</body>
+</html>
