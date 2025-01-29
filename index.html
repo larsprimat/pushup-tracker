@@ -44,9 +44,11 @@
             border-radius: 8px;
             font-size: 16px;
             font-weight: 600;
+            cursor: pointer;
         }
         button:disabled {
             background: #ccc;
+            cursor: default;
         }
         .stats {
             display: grid;
@@ -158,10 +160,12 @@
             padding: 8px;
             border-radius: 4px;
             border: 1px solid #ddd;
+            width: 100%;
         }
     </style>
 </head>
-<body>
+
+    <body>
     <div class="container">
         <div class="card">
             <h2>Workout Tracker</h2>
@@ -170,7 +174,7 @@
                 <button id="pullupTab" class="tab-button" onclick="switchTab('pullup')">Pullups</button>
             </div>
             <div class="input-group">
-                <input type="number" id="exerciseCount" placeholder="Number of reps">
+                <input type="number" id="exerciseCount" placeholder="Number of pushups">
                 <button onclick="logExercise()" id="logButton">Log</button>
             </div>
             <div class="stats">
@@ -227,6 +231,7 @@
     </div>
 
     <script>
+
         const PUSHUP_GOAL = 10000;
         const PULLUP_GOAL = 1000;
         let currentExercise = 'pushup';
@@ -254,6 +259,7 @@
             currentExercise = exercise;
             document.getElementById('pushupTab').classList.toggle('active', exercise === 'pushup');
             document.getElementById('pullupTab').classList.toggle('active', exercise === 'pullup');
+            document.getElementById('exerciseCount').placeholder = `Number of ${exercise}s`;
             updateDisplay();
         }
 
@@ -337,7 +343,6 @@
                 .join('');
         }
 
-        // Notification functions
         async function setupNotifications() {
             if (!('Notification' in window)) {
                 alert('This browser does not support notifications');
@@ -398,12 +403,10 @@
         }
 
         function checkAndNotify() {
-            const today = new Date().toDateString();
+
+        const today = new Date().toDateString();
             const pushupToday = pushupLogs.some(log => 
                 new Date(log.date).toDateString() === today
-            );
-            const
-new Date(log.date).toDateString() === today
             );
             const pullupToday = pullupLogs.some(log => 
                 new Date(log.date).toDateString() === today
@@ -421,7 +424,7 @@ new Date(log.date).toDateString() === today
             }
         }
 
-        // Initial setup
+        // Initialize display and notifications
         setupNotifications();
         updateDisplay();
 
@@ -432,4 +435,4 @@ new Date(log.date).toDateString() === today
         });
     </script>
 </body>
-</html>                
+</html>
