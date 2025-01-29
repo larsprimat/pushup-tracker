@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <title>Pushup Tracker</title>
+    <title>Workout Tracker</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
@@ -45,6 +45,9 @@
             font-size: 16px;
             font-weight: 600;
         }
+        button:disabled {
+            background: #ccc;
+        }
         .stats {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -61,6 +64,9 @@
             background: #e8f5e9;
             grid-column: span 2;
         }
+        .pullup-goal {
+            background: #e3f2fd;
+        }
         .stat-label {
             font-size: 14px;
             color: #666;
@@ -72,6 +78,9 @@
         }
         .goal-value {
             color: #2e7d32;
+        }
+        .pullup-value {
+            color: #1565c0;
         }
         .log {
             max-height: 200px;
@@ -90,20 +99,79 @@
             margin-top: 8px;
         }
         .progress-fill {
-            background: #4caf50;
             height: 100%;
             border-radius: 4px;
             transition: width 0.3s ease;
+        }
+        .pushup-progress {
+            background: #4caf50;
+        }
+        .pullup-progress {
+            background: #2196f3;
+        }
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 16px;
+            gap: 8px;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            background: #f0f0f0;
+            color: #666;
+        }
+        .tab-button.active {
+            background: #007AFF;
+            color: white;
+        }
+        .exercise-type {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+        .pushup-type {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .pullup-type {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .notification-settings {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .switch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .time-select {
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h2>Pushup Tracker</h2>
+            <h2>Workout Tracker</h2>
+            <div class="tab-buttons">
+                <button id="pushupTab" class="tab-button active" onclick="switchTab('pushup')">Pushups</button>
+                <button id="pullupTab" class="tab-button" onclick="switchTab('pullup')">Pullups</button>
+            </div>
             <div class="input-group">
-                <input type="number" id="pushupCount" placeholder="Number of pushups">
-                <button onclick="logPushups()">Log</button>
+                <input type="number" id="exerciseCount" placeholder="Number of reps">
+                <button onclick="logExercise()" id="logButton">Log</button>
             </div>
             <div class="stats">
                 <div class="stat-card">
@@ -114,18 +182,44 @@
                     <div class="stat-label">Total</div>
                     <div class="stat-value" id="totalCount">0</div>
                 </div>
-                <div class="stat-card goal-card">
-                    <div class="stat-label">2025 Goal Progress</div>
-                    <div class="stat-value goal-value" id="goalProgress">0/10000</div>
+                <div class="stat-card goal-card" id="pushupGoalCard">
+                    <div class="stat-label">2025 Pushup Goal Progress</div>
+                    <div class="stat-value goal-value" id="pushupGoalProgress">0/10000</div>
                     <div class="progress-bar">
-                        <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                        <div class="progress-fill pushup-progress" id="pushupProgressBar" style="width: 0%"></div>
                     </div>
                     <div class="stat-label" style="margin-top: 8px;">
-                        Daily target: <span id="dailyTarget">0</span> pushups
+                        Daily target: <span id="pushupDailyTarget">0</span> pushups
+                    </div>
+                </div>
+                <div class="stat-card goal-card pullup-goal" id="pullupGoalCard">
+                    <div class="stat-label">2025 Pullup Goal Progress</div>
+                    <div class="stat-value pullup-value" id="pullupGoalProgress">0/1000</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill pullup-progress" id="pullupProgressBar" style="width: 0%"></div>
+                    </div>
+                    <div class="stat-label" style="margin-top: 8px;">
+                        Daily target: <span id="pullupDailyTarget">0</span> pullups
                     </div>
                 </div>
             </div>
         </div>
+
+        <div class="card">
+            <h3>Notification Settings</h3>
+            <div class="notification-settings">
+                <div class="switch">
+                    <input type="checkbox" id="notificationToggle" onclick="toggleNotifications()">
+                    <label for="notificationToggle">Enable daily reminder</label>
+                </div>
+                <select id="reminderTime" class="time-select" onchange="updateReminderTime()">
+                    <option value="20:00">8:00 PM</option>
+                    <option value="19:00">7:00 PM</option>
+                    <option value="21:00">9:00 PM</option>
+                </select>
+            </div>
+        </div>
+
         <div class="card">
             <h3>Recent Logs</h3>
             <div class="log" id="logList"></div>
@@ -133,10 +227,14 @@
     </div>
 
     <script>
-        const YEAR_GOAL = 10000;
+        const PUSHUP_GOAL = 10000;
+        const PULLUP_GOAL = 1000;
+        let currentExercise = 'pushup';
+        let notificationTimer;
         
-        // Load data from localStorage
-        let logs = JSON.parse(localStorage.getItem('pushupLogs')) || [];
+        // Load data from localStorage - maintain backward compatibility
+        let pushupLogs = JSON.parse(localStorage.getItem('pushupLogs')) || [];
+        let pullupLogs = JSON.parse(localStorage.getItem('pullupLogs')) || [];
 
         function getDaysLeftInYear() {
             const today = new Date();
@@ -145,15 +243,23 @@
             return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         }
 
-        function calculateDailyTarget() {
+        function calculateDailyTarget(logs, goal) {
             const totalDone = logs.reduce((sum, log) => sum + log.count, 0);
-            const remaining = YEAR_GOAL - totalDone;
+            const remaining = goal - totalDone;
             const daysLeft = getDaysLeftInYear();
             return Math.ceil(Math.max(0, remaining / daysLeft));
         }
 
-        function logPushups() {
-            const count = parseInt(document.getElementById('pushupCount').value);
+        function switchTab(exercise) {
+            currentExercise = exercise;
+            document.getElementById('pushupTab').classList.toggle('active', exercise === 'pushup');
+            document.getElementById('pullupTab').classList.toggle('active', exercise === 'pullup');
+            updateDisplay();
+        }
+
+        function logExercise() {
+            const input = document.getElementById('exerciseCount');
+            const count = parseInt(input.value);
             if (isNaN(count) || count <= 0) return;
 
             const log = {
@@ -161,14 +267,26 @@
                 count: count
             };
 
-            logs.unshift(log);
-            localStorage.setItem('pushupLogs', JSON.stringify(logs));
+            if (currentExercise === 'pushup') {
+                pushupLogs.unshift(log);
+                localStorage.setItem('pushupLogs', JSON.stringify(pushupLogs));
+            } else {
+                pullupLogs.unshift(log);
+                localStorage.setItem('pullupLogs', JSON.stringify(pullupLogs));
+            }
+
+            input.value = '';
             updateDisplay();
-            document.getElementById('pushupCount').value = '';
+            
+            // Reschedule notification if needed
+            if (document.getElementById('notificationToggle').checked) {
+                scheduleNotification();
+            }
         }
 
         function updateDisplay() {
             const today = new Date().toDateString();
+            const logs = currentExercise === 'pushup' ? pushupLogs : pullupLogs;
             
             const todayTotal = logs
                 .filter(log => new Date(log.date).toDateString() === today)
@@ -180,29 +298,138 @@
             document.getElementById('todayCount').textContent = todayTotal;
             document.getElementById('totalCount').textContent = allTimeTotal;
             
-            // Update goal progress
-            const progressPercent = (allTimeTotal / YEAR_GOAL) * 100;
-            document.getElementById('goalProgress').textContent = `${allTimeTotal}/${YEAR_GOAL}`;
-            document.getElementById('progressBar').style.width = `${Math.min(100, progressPercent)}%`;
+            // Update both goal progresses
+            const pushupTotal = pushupLogs.reduce((sum, log) => sum + log.count, 0);
+            const pullupTotal = pullupLogs.reduce((sum, log) => sum + log.count, 0);
             
-            // Update daily target
-            document.getElementById('dailyTarget').textContent = calculateDailyTarget();
+            const pushupPercent = (pushupTotal / PUSHUP_GOAL) * 100;
+            const pullupPercent = (pullupTotal / PULLUP_GOAL) * 100;
+            
+            document.getElementById('pushupGoalProgress').textContent = `${pushupTotal}/${PUSHUP_GOAL}`;
+            document.getElementById('pullupGoalProgress').textContent = `${pullupTotal}/${PULLUP_GOAL}`;
+            document.getElementById('pushupProgressBar').style.width = `${Math.min(100, pushupPercent)}%`;
+            document.getElementById('pullupProgressBar').style.width = `${Math.min(100, pullupPercent)}%`;
+            
+            // Update daily targets
+            document.getElementById('pushupDailyTarget').textContent = calculateDailyTarget(pushupLogs, PUSHUP_GOAL);
+            document.getElementById('pullupDailyTarget').textContent = calculateDailyTarget(pullupLogs, PULLUP_GOAL);
 
-            // Update log list
+            // Update log list with combined logs
+            const combinedLogs = [...pushupLogs, ...pullupLogs]
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 10);
+
             const logList = document.getElementById('logList');
-            logList.innerHTML = logs
-                .slice(0, 10)
-                .map(log => `
-                    <div class="log-item">
-                        <span>${new Date(log.date).toLocaleDateString()}</span>
-                        <span>${log.count} pushups</span>
-                    </div>
-                `)
+            logList.innerHTML = combinedLogs
+                .map(log => {
+                    const isFromPushupLog = pushupLogs.some(p => p.date === log.date && p.count === log.count);
+                    const type = isFromPushupLog ? 'pushup' : 'pullup';
+                    return `
+                        <div class="log-item">
+                            <span>
+                                <span class="exercise-type ${type}-type">${type}s</span>
+                                ${new Date(log.date).toLocaleDateString()}
+                            </span>
+                            <span>${log.count} reps</span>
+                        </div>
+                    `;
+                })
                 .join('');
         }
 
-        // Initial display update
+        // Notification functions
+        async function setupNotifications() {
+            if (!('Notification' in window)) {
+                alert('This browser does not support notifications');
+                return;
+            }
+
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                const notificationEnabled = localStorage.getItem('notificationEnabled') === 'true';
+                document.getElementById('notificationToggle').checked = notificationEnabled;
+                if (notificationEnabled) {
+                    scheduleNotification();
+                }
+            }
+        }
+
+        function toggleNotifications() {
+            const enabled = document.getElementById('notificationToggle').checked;
+            localStorage.setItem('notificationEnabled', enabled);
+            if (enabled) {
+                scheduleNotification();
+            } else {
+                if (notificationTimer) clearTimeout(notificationTimer);
+            }
+        }
+
+        function updateReminderTime() {
+            if (document.getElementById('notificationToggle').checked) {
+                scheduleNotification();
+            }
+        }
+
+        function scheduleNotification() {
+            if (notificationTimer) clearTimeout(notificationTimer);
+            
+            const reminderTime = document.getElementById('reminderTime').value;
+            const [hours, minutes] = reminderTime.split(':').map(Number);
+            
+            const now = new Date();
+            const scheduledTime = new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                now.getDate(),
+                hours,
+                minutes
+            );
+            
+            if (scheduledTime <= now) {
+                scheduledTime.setDate(scheduledTime.getDate() + 1);
+            }
+            
+            const timeUntilNotification = scheduledTime - now;
+            
+            notificationTimer = setTimeout(() => {
+                checkAndNotify();
+                scheduleNotification(); // Schedule next day's notification
+            }, timeUntilNotification);
+        }
+
+        function checkAndNotify() {
+            const today = new Date().toDateString();
+            const pushupToday = pushupLogs.some(log => 
+                new Date(log.date).toDateString() === today
+            );
+            const
+new Date(log.date).toDateString() === today
+            );
+            const pullupToday = pullupLogs.some(log => 
+                new Date(log.date).toDateString() === today
+            );
+
+            if (!pushupToday || !pullupToday) {
+                const missingExercises = [];
+                if (!pushupToday) missingExercises.push('pushups');
+                if (!pullupToday) missingExercises.push('pullups');
+                
+                new Notification('Workout Reminder', {
+                    body: `Don't forget to log your ${missingExercises.join(' and ')} for today!`,
+                    icon: '/favicon.ico'
+                });
+            }
+        }
+
+        // Initial setup
+        setupNotifications();
         updateDisplay();
+
+        // Enable input validation
+        document.getElementById('exerciseCount').addEventListener('input', function() {
+            const value = this.value;
+            document.getElementById('logButton').disabled = !value || parseInt(value) <= 0;
+        });
     </script>
 </body>
-</html>
+</html>                
