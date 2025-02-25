@@ -162,10 +162,17 @@
             border: 1px solid #ddd;
             width: 100%;
         }
+        /* New visualization button style */
+        .viz-button {
+            display: block;
+            margin: 16px auto 0;
+            background: #9c27b0;
+            width: 100%;
+        }
     </style>
 </head>
 
-    <body>
+<body>
     <div class="container">
         <div class="card">
             <h2>Workout Tracker</h2>
@@ -207,6 +214,11 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Visualization link with a better label -->
+            <a href="https://larsprimat.github.io/pushup-tracker-visualization/" target="_blank">
+                <button class="viz-button">View Detailed History & Graphs</button>
+            </a>
         </div>
 
         <div class="card">
@@ -231,7 +243,6 @@
     </div>
 
     <script>
-
         const PUSHUP_GOAL = 10000;
         const PULLUP_GOAL = 1000;
         let currentExercise = 'pushup';
@@ -240,6 +251,9 @@
         // Load data from localStorage - maintain backward compatibility
         let pushupLogs = JSON.parse(localStorage.getItem('pushupLogs')) || [];
         let pullupLogs = JSON.parse(localStorage.getItem('pullupLogs')) || [];
+
+        // Initialize and automatically sync data for visualization
+        syncToVisualization();
 
         function getDaysLeftInYear() {
             const today = new Date();
@@ -283,6 +297,9 @@
 
             input.value = '';
             updateDisplay();
+            
+            // Automatically sync to visualization after logging
+            syncToVisualization();
             
             // Reschedule notification if needed
             if (document.getElementById('notificationToggle').checked) {
@@ -341,6 +358,34 @@
                     `;
                 })
                 .join('');
+        }
+
+        // Format data for visualization
+        function formatDataForVisualization() {
+            // Create a combined dataset with exercise type included
+            const formattedPushups = pushupLogs.map(log => ({
+                date: new Date(log.date).toISOString().split('T')[0],
+                exercise: 'pushup',
+                count: log.count
+            }));
+            
+            const formattedPullups = pullupLogs.map(log => ({
+                date: new Date(log.date).toISOString().split('T')[0],
+                exercise: 'pullup',
+                count: log.count
+            }));
+            
+            return [...formattedPushups, ...formattedPullups];
+        }
+        
+        // Function to automatically sync data to visualization site
+        function syncToVisualization() {
+            const formattedData = formatDataForVisualization();
+            
+            // Store the data in localStorage for the visualization site to access
+            localStorage.setItem('visualizationData', JSON.stringify(formattedData));
+            
+            console.log('Data synced to visualization site');
         }
 
         async function setupNotifications() {
@@ -403,8 +448,7 @@
         }
 
         function checkAndNotify() {
-
-        const today = new Date().toDateString();
+            const today = new Date().toDateString();
             const pushupToday = pushupLogs.some(log => 
                 new Date(log.date).toDateString() === today
             );
